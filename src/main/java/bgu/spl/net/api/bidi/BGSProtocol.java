@@ -55,5 +55,3 @@ public class BGSProtocol implements BidiMessagingProtocol<Message> {
 	
 
 }
-
-
