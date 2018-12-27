@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "../header/ConnectionHandler.h"
+#include "../header/BgsEncoderDecoder.h"
 
 class SocketReadTask {
 private:
@@ -29,19 +30,15 @@ public:
     void run(){
         while(true) {
             unsigned long len;
-
             std::string answer;
-
             if (!_connectionHandler -> getLine(answer)) {
                 std::cout << "Disconnected. Exiting...\n" << std::endl;
                 break;
             }
-
             len = answer.length();
-
             answer.resize(len - 1);
             std::cout << "Reply: " << answer << std::endl;
-            if (answer == "ACK" && shouldTerminate()) {
+            if (answer == "ACK 3" && shouldTerminate()) {
                 _cv.notify_all();
                 break;
             }
@@ -62,11 +59,12 @@ private:
     std::unique_lock<std::mutex> &_waitOn;
     bool &_terminated;
     std::condition_variable &_cv;
+    BgsEncoderDecoder _encdec;
 
 
 public:
     UserReadTask(std::string name, ConnectionHandler *connectionHandler, bool &terminated, std::mutex& mutex, std::unique_lock<std::mutex> &&waitOn, std::condition_variable &cv) :
-    _name(std::move(name)), _mutex(mutex), _waitOn(waitOn), _terminated(terminated), _cv(cv){
+    _name(std::move(name)), _mutex(mutex), _waitOn(waitOn), _terminated(terminated), _cv(cv), _encdec(){
         _connectionHandler = connectionHandler;
     }
 
@@ -76,12 +74,14 @@ public:
             char buf[bufsize];
             std::cin.getline(buf, bufsize);
             std::string line(buf);
-            unsigned long len=line.length();
-            if (!_connectionHandler -> sendLine(line)) {
+            std::string toSend = _encdec.encode(line);
+            std::cout << "Encoded message: " << toSend << std::endl;
+            unsigned long len=toSend.length();
+            if (!_connectionHandler -> sendLine(toSend)) {
                 std::cout << "Disconnected. Exiting...\n" << std::endl;
                 break;
             }
-            if(line == "LOGOUT"){
+            if(line == "LOGOUT "){
                 _mutex.lock();
                 _terminated = true;
                 _mutex.unlock();
@@ -89,7 +89,7 @@ public:
                 break;
             }
             // connectionHandler.sendLine(line) appends '\n' to the message. Therefor we send len+1 bytes.
-           // std::cout << "Sent " << len+1 << " bytes to server" << std::endl;
+            std::cout << "Sent " << len+1 << " bytes to server" << std::endl;
         }
         std::this_thread::yield();
     }
@@ -117,7 +117,7 @@ int main (int argc, char *argv[]) {
     std::unique_lock<std::mutex> lck(notify);
     std::condition_variable cv;
     UserReadTask task1("user", &connectionHandler, ter, mutex, std::move(lck), cv);
-    SocketReadTask task2("socket", &connectionHandler, ter, mutex/*, std::move(lck)*/, cv);
+    SocketReadTask task2("socket", &connectionHandler, ter, mutex, cv);
     std::thread th1(&UserReadTask::run, &task1);
     std::thread th2(&SocketReadTask::run, &task2);
 

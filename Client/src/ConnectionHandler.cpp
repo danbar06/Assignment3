@@ -8,7 +8,7 @@ using std::cerr;
 using std::endl;
 using std::string;
 
-ConnectionHandler::ConnectionHandler(string host, short port): host_(host), port_(port), io_service_(), socket_(io_service_){}
+ConnectionHandler::ConnectionHandler(string host, short port): host_(host), port_(port), io_service_(), socket_(io_service_), encdec_(){}
 
 
 ConnectionHandler::~ConnectionHandler() {
@@ -74,17 +74,19 @@ bool ConnectionHandler::sendLine(std::string& line) {
 
 bool ConnectionHandler::getFrameAscii(std::string& frame, char delimiter) {
     char ch;
+    std::string ans;
     // Stop when we encounter the null character.
     // Notice that the null character is not appended to the frame string.
     try {
         do{
             getBytes(&ch, 1);
-            frame.append(1, ch);
+            ans = encdec_.decodeNextByte(ch);
         }while (delimiter != ch);
     } catch (std::exception& e) {
         std::cerr << "recv failed (Error: " << e.what() << ')' << std::endl;
         return false;
     }
+    frame.append(ans);
     return true;
 }
 
