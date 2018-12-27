@@ -1,10 +1,8 @@
 package bgu.spl.net.api.bidi;
 import bgu.spl.net.srv.bidi.*;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class ConnectionsImpl<T> implements Connections<T> {
