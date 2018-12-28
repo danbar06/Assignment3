@@ -21,10 +21,10 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     	switch(code) {
     		case "NOTIFICATION":
     			Opcode = shortToBytes((short) 9);
-    			if(message.substring(0, 2).equals("PM"))
-    				tmp = ('0'+rest+'\0').replaceFirst(" ","\0").getBytes();
+    			if(rest.substring(0, 2).equals("PM"))
+    				tmp = ('0'+rest.substring(3)+'\0').replaceFirst(" ","\0").getBytes();
     			else
-    				tmp = ('1'+rest+'\0').replaceFirst(" ","\0").getBytes();
+    				tmp = ('1'+rest.substring(7)+'\0').replaceFirst(" ","\0").getBytes();
     			break;
     		case "ACK":
     			Opcode = shortToBytes((short) 10);
@@ -76,7 +76,7 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     	if(tmp == null || Opcode == null)
     		System.out.println("tmp or Opcode in encode are not initialized");
 		ans = new byte[tmp.length+Opcode.length+1];
-		for(int i=0;i<ans.length;i++) {
+		for(int i=0;i<ans.length-1;i++) {
 			if(i<Opcode.length)
 				ans[i]=Opcode[i];
 			else
@@ -109,7 +109,7 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
         //notice that we explicitly requesting that the string will be decoded from UTF-8
         //this is not actually required as it is the default encoding in java.
     	byte[] opcode = new byte[2];
-    	byte[] command = new byte[bytes.length-2];
+    	byte[] command = new byte[len-2];
     	opcode[0]=bytes[0];
     	opcode[1]=bytes[1];     
     	short code = bytesToShort(opcode);
@@ -118,25 +118,25 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     		return code+" ";
     	}
     	if(code == 4) {
-    		byte[] tmp = new byte[1];
-    		tmp[0]=bytes[2];
+    		byte[] tmp = new byte[2];
+    		tmp[1]=bytes[2];
     		short follow = bytesToShort(tmp);
     		tmp = new byte[2];
     		tmp[0] = bytes[3];
     		tmp[1] = bytes[4];
     		short numOfUsers = bytesToShort(tmp);
-    		for(int i=5;i<bytes.length;i++)
+    		for(int i=5;i<len;i++)
 	    		command[i-5]=bytes[i];
-	        String result = new String(command, 0, len, StandardCharsets.UTF_8);
+	        String result = new String(command, 0, command.length, StandardCharsets.UTF_8);
 	        len = 0;
     		return code+" "+follow+" "+numOfUsers+" "+result+" ";
     	}
     	if(code !=4 && code !=7 && code !=3) {
-	    	for(int i=2;i<bytes.length;i++)
+	    	for(int i=2;i<len;i++)
 	    		command[i-2]=bytes[i];
-	        String result = new String(command, 0, len, StandardCharsets.UTF_8);
+	        String result = new String(command, 0, command.length, StandardCharsets.UTF_8);
 	        len = 0;
-	        return code +" "+ result.replace('\0',' ');
+	        return code + result.replace('\0',' ');
     	}
     	return null;
     }
