@@ -69,7 +69,8 @@ bool ConnectionHandler::getLine(std::string& line) {
 }
 
 bool ConnectionHandler::sendLine(std::string& line) {
-    return sendFrameAscii(line, '\n');
+    std::string encodedLine = encdec_.encode(line);
+    return sendFrameAscii(encodedLine, '\n');
 }
 
 bool ConnectionHandler::getFrameAscii(std::string& frame, char delimiter) {
@@ -81,12 +82,14 @@ bool ConnectionHandler::getFrameAscii(std::string& frame, char delimiter) {
         do{
             getBytes(&ch, 1);
             ans = encdec_.decodeNextByte(ch);
-        }while (delimiter != ch);
+            if(ans != "-1"){
+                frame.append(ans);
+            }
+        }while (ans == "-1");
     } catch (std::exception& e) {
         std::cerr << "recv failed (Error: " << e.what() << ')' << std::endl;
         return false;
     }
-    frame.append(ans);
     return true;
 }
 

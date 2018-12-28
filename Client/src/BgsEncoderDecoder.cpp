@@ -1,4 +1,5 @@
 #include "../header/BgsEncoderDecoder.h"
+using namespace std;
 
 
 void BgsEncoderDecoder::pushByte(char nextByte){
@@ -6,15 +7,16 @@ void BgsEncoderDecoder::pushByte(char nextByte){
 }
 
 
-std::string BgsEncoderDecoder::popString() {
-    std::string ans;
+string BgsEncoderDecoder::popString() {
+    string ans;
     char opcode[2];
     opcode[0] = buff[0];
     opcode[1] = buff[1];
     short op = bytesToShort(&opcode[0]);
     switch(op){
         case 9: {
-            std::string type;
+
+            string type;
             type = buff[2] == '0' ? "PM" : "Public";
             ans += "NOTIFICATION " + type+ " ";
             for(int i = 3 ; i < buff.size()-1 ; i++){
@@ -27,16 +29,16 @@ std::string BgsEncoderDecoder::popString() {
             mOpcode[0] = buff[2];
             mOpcode[1] = buff[3];
             short mOp = bytesToShort(mOpcode);
-            std::string toAdd = "";
+            string toAdd = "";
             switch (mOp){
                 case 4 | 7:{
                     char numOfUsers[2];
                     numOfUsers[0] = buff[4];
                     numOfUsers[1] = buff[5];
                     short num = bytesToShort(numOfUsers);
-                    toAdd += num + ' ';
+                    toAdd += to_string(num) + ' ';
                     for(int i = 6 ; i < buff.size()-1 ; i++){
-                        toAdd += buff[i];
+                        toAdd += buff[i] == '\0' ? ' ' : buff[i];
                     }
                     break;
                 }
@@ -53,18 +55,19 @@ std::string BgsEncoderDecoder::popString() {
                     short num1 = bytesToShort(numPosts);
                     short num2 = bytesToShort(numFollowers);
                     short num3 = bytesToShort(numFollowing);
-                    toAdd += num1 + ' ' + num2 + ' ' + num3;
+                    toAdd += to_string(num1) + ' ' + to_string(num2) + ' ' + to_string(num3);
 
                 }
             }
-            ans += toAdd != "" ? "ACK " + mOp+ ' ' + toAdd : "ACK " + mOp;
+            ans += toAdd != "" ? "ACK " + to_string(mOp) + ' ' + toAdd : "ACK " + to_string(mOp);
+            break;
         }
         case 11:{
             char mOpcode[2];
             mOpcode[0] = buff[2];
             mOpcode[1] = buff[3];
             short mOp = bytesToShort(mOpcode);
-            ans += "ERROR " + mOp;
+            ans += "ERROR " + to_string(mOp);
         }
     }
 
@@ -73,24 +76,29 @@ std::string BgsEncoderDecoder::popString() {
 
 }
 
-std::string BgsEncoderDecoder::decodeNextByte(char c) {
-    if(c == '\n')
+string BgsEncoderDecoder::decodeNextByte(char c) {
+    if(c == '\n' && counter > 3){
+        counter = 0;
         return popString();
+    }
     pushByte(c);
-    return nullptr;
+    counter++;
+    return "-1";
 }
 
-std::string BgsEncoderDecoder::encode(std::string message) {
-    std::vector<char> buffer;
-    char* opcode[2];
-    std::string command(message.begin(), std::find(message.begin(),message.end(), ' '));
-    std::string rest(std::find(message.begin(),message.end(), ' ')+1, message.end());
-    std::vector<char> messageBuffer(rest.begin(), rest.end());
+string BgsEncoderDecoder::encode(string message) {
+    vector<char> buffer;
+    char opcode[2];
+    string command(message.begin(), find(message.begin(),message.end(), ' '));
+
+    string rest(find(message.begin(), message.end(), ' ') , message.end());
+    vector<char> messageBuffer(rest.begin(), rest.end());
     switch(commandType(command)){
         case REGISTER: {
-            shortToBytes(1, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
+            rest.erase(0,1);
+            shortToBytes(1, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
             for (char c : messageBuffer) {
                 buffer.push_back(c != ' ' ? c : '\0');
             }
@@ -98,9 +106,10 @@ std::string BgsEncoderDecoder::encode(std::string message) {
             break;
         }
         case PM: {
-            shortToBytes(6, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
+            rest.erase(0,1);
+            shortToBytes(6, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
             for (char c : messageBuffer) {
                 buffer.push_back(c != ' ' ? c : '\0');
             }
@@ -108,9 +117,10 @@ std::string BgsEncoderDecoder::encode(std::string message) {
             break;
         }
         case LOGIN: {
-            shortToBytes(2, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
+            rest.erase(0,1);
+            shortToBytes(2, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
             for (char c : messageBuffer) {
                 buffer.push_back(c != ' ' ? c : '\0');
             }
@@ -118,55 +128,57 @@ std::string BgsEncoderDecoder::encode(std::string message) {
             break;
         }
         case LOGOUT: {
-            shortToBytes(3, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
-            buffer.push_back('\n');
+            shortToBytes(3, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
             break;
         }
         case USERLIST: {
-            shortToBytes(7, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
-            buffer.push_back('\n');
+            shortToBytes(7, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
             break;
         }
         case STAT: {
-            shortToBytes(8, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
-            std::copy(rest.begin(), rest.end(), std::back_inserter(buffer));
+            rest.erase(0,1);
+            shortToBytes(8, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
+            copy(rest.begin(), rest.end(), back_inserter(buffer));
             buffer.push_back('\0');
             break;
         }
         case FOLLOW: {
-            shortToBytes(4, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
+            rest.erase(0,1);
+            shortToBytes(4, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
             short status = atoi(&message.at(7));
-            shortToBytes(status, *opcode);
-            buffer.push_back(*opcode[1]);
-            std::string num(message.begin()+9, std::find(message.begin()+9,message.end(), ' '));
+            shortToBytes(status, &opcode[0]);
+            buffer.push_back(opcode[1]);
+            string num(message.begin()+9, find(message.begin()+9,message.end(), ' '));
             short numOfUsers = stoi(num);
-            shortToBytes(numOfUsers, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
-            std::copy(std::find(message.begin()+9,message.end(), ' ')+1, rest.end(), std::back_inserter(buffer));
+            shortToBytes(numOfUsers, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
+            vector<char> followers(find(message.begin()+9,message.end(), ' ')+1, message.end());
+            for(int i = 0; i < followers.size() ; i++)
+                buffer.push_back(followers[i] != ' ' ? followers[i] : '\0');
             break;
         }
         case POST:{
-            shortToBytes(5, *opcode);
-            buffer.push_back(*opcode[0]);
-            buffer.push_back(*opcode[1]);
-            std::copy(rest.begin(), rest.end(), std::back_inserter(buffer));
+            rest.erase(0,1);
+            shortToBytes(5, &opcode[0]);
+            buffer.push_back(opcode[0]);
+            buffer.push_back(opcode[1]);
+            copy(rest.begin(), rest.end(), back_inserter(buffer));
             buffer.push_back('\0');
-            buffer.push_back('\n');
             break;
         }
 
 
     }
-    std::string temp(buffer.begin(),buffer.end());
+    string temp(buffer.begin(),buffer.end());
     return temp;
 }
 

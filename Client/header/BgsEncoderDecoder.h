@@ -30,6 +30,7 @@ enum opCode{
 class BgsEncoderDecoder {
 private:
     std::vector<char> buff;
+    int counter = 0;
     void pushByte(char nextByte);
     std::string popString();
     void shortToBytes(short num, char* bytesArr);

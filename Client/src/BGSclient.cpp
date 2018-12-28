@@ -29,15 +29,12 @@ public:
 
     void run(){
         while(true) {
-            unsigned long len;
             std::string answer;
             if (!_connectionHandler -> getLine(answer)) {
                 std::cout << "Disconnected. Exiting...\n" << std::endl;
                 break;
             }
-            len = answer.length();
-            answer.resize(len - 1);
-            std::cout << "Reply: " << answer << std::endl;
+            std::cout << answer << std::endl;
             if (answer == "ACK 3" && shouldTerminate()) {
                 _cv.notify_all();
                 break;
@@ -74,14 +71,12 @@ public:
             char buf[bufsize];
             std::cin.getline(buf, bufsize);
             std::string line(buf);
-            std::string toSend = _encdec.encode(line);
-            std::cout << "Encoded message: " << toSend << std::endl;
-            unsigned long len=toSend.length();
-            if (!_connectionHandler -> sendLine(toSend)) {
+            unsigned long len=line.length();
+            if (!_connectionHandler -> sendLine(line)) {
                 std::cout << "Disconnected. Exiting...\n" << std::endl;
                 break;
             }
-            if(line == "LOGOUT "){
+            if(line == "LOGOUT"){
                 _mutex.lock();
                 _terminated = true;
                 _mutex.unlock();
