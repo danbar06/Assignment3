@@ -7,12 +7,11 @@ import bgu.spl.net.srv.bidi.*;
 public class EchoServerMain {
 
 	public static void main(String[] args) {
-		 Server.threadPerClient(
+		Server.threadPerClient(
 				 7777,
 				 () ->  new BGSProtocol(),
 				 () ->  new LineMessageEncoderDecoder()
 				 ).serve();
-
 	}
 
 }

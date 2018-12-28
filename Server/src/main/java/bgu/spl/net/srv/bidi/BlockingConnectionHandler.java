@@ -2,15 +2,13 @@ package bgu.spl.net.srv.bidi;
 
 import bgu.spl.net.api.MessageEncoderDecoder;
 import bgu.spl.net.api.bidi.BidiMessagingProtocol;
-import bgu.spl.net.api.bidi.Connections;
 import bgu.spl.net.api.bidi.ConnectionsImpl;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger; 
+ 
 
 public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler<T> {
 
