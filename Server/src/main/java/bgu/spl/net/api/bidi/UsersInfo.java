@@ -7,6 +7,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class UsersInfo {
@@ -14,7 +15,7 @@ public class UsersInfo {
 	public Map<String,Integer> userToId;
 	public Map<String,Set<String>> whoFollowsMe;
 	public Map<String,Queue<String>> pending;
-	public Map<String, int[]> stat;//3 space vector, first num of posts, second num of followers, third num of following
+	public Map<String, AtomicInteger[]> stat;//3 space vector, first num of posts, second num of followers, third num of following
 	private static UsersInfo instance = new UsersInfo();
 
 	private UsersInfo() {
