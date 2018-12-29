@@ -1,4 +1,4 @@
-#include "../header/BgsEncoderDecoder.h"
+#include "../include/BgsEncoderDecoder.h"
 using namespace std;
 
 
@@ -31,7 +31,18 @@ string BgsEncoderDecoder::popString() {
             short mOp = bytesToShort(mOpcode);
             string toAdd = "";
             switch (mOp){
-                case 4 | 7:{
+                case 4:{
+                    char numOfUsers[2];
+                    numOfUsers[0] = buff[4];
+                    numOfUsers[1] = buff[5];
+                    short num = bytesToShort(numOfUsers);
+                    toAdd += to_string(num) + ' ';
+                    for(int i = 6 ; i < buff.size()-1 ; i++){
+                        toAdd += buff[i] == '\0' ? ' ' : buff[i];
+                    }
+                    break;
+                }
+                case 7:{
                     char numOfUsers[2];
                     numOfUsers[0] = buff[4];
                     numOfUsers[1] = buff[5];
@@ -95,7 +106,7 @@ string BgsEncoderDecoder::encode(string message) {
     vector<char> messageBuffer(rest.begin(), rest.end());
     switch(commandType(command)){
         case REGISTER: {
-            rest.erase(0,1);
+            messageBuffer.erase(messageBuffer.begin());
             shortToBytes(1, &opcode[0]);
             buffer.push_back(opcode[0]);
             buffer.push_back(opcode[1]);
@@ -106,7 +117,7 @@ string BgsEncoderDecoder::encode(string message) {
             break;
         }
         case PM: {
-            rest.erase(0,1);
+            messageBuffer.erase(messageBuffer.begin());
             shortToBytes(6, &opcode[0]);
             buffer.push_back(opcode[0]);
             buffer.push_back(opcode[1]);
@@ -117,7 +128,7 @@ string BgsEncoderDecoder::encode(string message) {
             break;
         }
         case LOGIN: {
-            rest.erase(0,1);
+            messageBuffer.erase(messageBuffer.begin());
             shortToBytes(2, &opcode[0]);
             buffer.push_back(opcode[0]);
             buffer.push_back(opcode[1]);

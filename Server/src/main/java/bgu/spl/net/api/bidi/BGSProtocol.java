@@ -208,15 +208,14 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 	private Set<String> Tagged(String command) {
 		Set<String> ans = new HashSet<>();
 		int index = command.indexOf('@');
-		String cut;
 		String username;
 		while(index!=-1) {
-			cut=command.substring(index);
-			username=cut.substring(0, cut.indexOf(" "));
-			ans.add(username);
-			cut=cut.substring(cut.indexOf(" "));
-			index = cut.indexOf('@');
-			cut=cut.substring(index);
+			command=command.substring(index);
+			username=command.substring(1, command.indexOf(" "));
+			if(usersInfo.registered.containsKey(username))
+				ans.add(username);
+			command=command.substring(command.indexOf(" "));
+			index = command.indexOf('@');
 		}
 		return ans;
 	}

@@ -4,8 +4,8 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include "../header/ConnectionHandler.h"
-#include "../header/BgsEncoderDecoder.h"
+#include "../include/ConnectionHandler.h"
+#include "../include/BgsEncoderDecoder.h"
 
 class SocketReadTask {
 private:

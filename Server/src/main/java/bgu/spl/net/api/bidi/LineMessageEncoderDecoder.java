@@ -126,17 +126,19 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     		tmp[1] = bytes[4];
     		short numOfUsers = bytesToShort(tmp);
     		for(int i=5;i<len;i++)
-	    		command[i-5]=bytes[i];
-	        String result = new String(command, 0, command.length, StandardCharsets.UTF_8);
+	    		if(bytes[i] != '\0')command[i-5]=bytes[i];
+	    		else command[i-5]=' ';
+	        String result = new String(command, 0, command.length-3, StandardCharsets.UTF_8);
 	        len = 0;
     		return code+" "+follow+" "+numOfUsers+" "+result+" ";
     	}
     	if(code !=4 && code !=7 && code !=3) {
 	    	for(int i=2;i<len;i++)
-	    		command[i-2]=bytes[i];
+	    		if(bytes[i] != '\0')command[i-2]=bytes[i];
+	    		else command[i-2]=' ';
 	        String result = new String(command, 0, command.length, StandardCharsets.UTF_8);
 	        len = 0;
-	        return code + result.replace('\0',' ');
+	        return code+" " + result;
     	}
     	return null;
     }
