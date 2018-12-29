@@ -158,6 +158,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 								pending.get(s).add("NOTIFICATION Public "+currentUser+" "+content);
 						}
 					}
+					connections.send(id,"ACK 5");
 				}
 				break;
 
@@ -174,6 +175,8 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 						else
 							pending.get(recipient).add("NOTIFICATION PM "+currentUser+" "+content);
 					}
+					connections.send(id,"ACK 6");
+
 				}
 				break;
 
