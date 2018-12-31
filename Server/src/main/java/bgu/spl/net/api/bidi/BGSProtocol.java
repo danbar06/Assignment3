@@ -17,6 +17,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 	private int id;
 	private String currentUser;
 	private boolean shouldTerminate;
+	private boolean imConnected;
 	
 	
 	@Override
@@ -26,6 +27,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 		this.usersInfo = UsersInfo.getInstance();
 		shouldTerminate=false;
 		currentUser = "";
+		imConnected=false;
 		synchronized(lock) {
 			if(connected==null) connected = new HashSet<>();
 			if(savedMsg==null) savedMsg = new LinkedList<>();
@@ -66,7 +68,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 				if(!registered.containsKey(username) || !registered.get(username).equals(pass))
 					connections.send(id,"ERROR 2");
 				else {
-					if(connected.contains(username) || !currentUser.equals(""))
+					if(connected.contains(username) || !imConnected)
 						connections.send(id,"ERROR 2");
 					else {
 						synchronized(connected) {
@@ -74,6 +76,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 							connected.add(currentUser);
 							userToId.put(currentUser, id);
 							connections.send(id,"ACK 2");
+							imConnected=true;
 							while(!pending.get(username).isEmpty())
 								connections.send(id, pending.get(username).remove());
 						}
@@ -81,7 +84,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 				}
 				break;
 			case 3:
-				if(currentUser.equals(""))
+				if(imConnected)
 					connections.send(id,"ERROR 3");
 				else {
 					synchronized(connected) {
@@ -93,7 +96,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 				}
 				break;
 			case 4:
-				if(!currentUser.equals("")) {
+				if(!imConnected) {
 					int follow = Integer.parseInt(command.substring(0, command.indexOf(" ")));
 					command=command.substring(command.indexOf(" ")+1);
 					int numOfUsers = Integer.parseInt(command.substring(0, command.indexOf(" ")));
@@ -142,7 +145,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 				break;
 
 			case 5:
-				if(currentUser.equals(""))
+				if(imConnected)
 					connections.send(id,"ERROR 5");
 				else {
 					stat.get(currentUser)[0].incrementAndGet();
@@ -164,7 +167,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 
 			case 6:
 				String recipient=command.substring(0, command.indexOf(" "));
-				if(currentUser.equals("") || !registered.containsKey(recipient))
+				if(imConnected || !registered.containsKey(recipient))
 					connections.send(id,"ERROR 6");
 				else {
 					synchronized(savedMsg) {savedMsg.add(command);}
@@ -180,7 +183,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 				break;
 
 			case 7:
-				if(currentUser.equals(""))
+				if(imConnected)
 					connections.send(id,"ERROR 7");
 				else {
 					String ans;
@@ -196,7 +199,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 
 			case 8:
 				username = command.substring(0, command.length()-1);
-				if(currentUser.equals("") || !registered.containsKey(username))
+				if(imConnected || !registered.containsKey(username))
 					connections.send(id,"ERROR 8");
 				else {
 					String ans = stat.get(username)[0].get()+" "+stat.get(username)[1].get()+" "+stat.get(username)[2].get();
