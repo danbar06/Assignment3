@@ -55,7 +55,8 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 					userToId.put(username, id);
 					whoFollowsMe.put(username, new HashSet<>());
 					pending.put(username, new ConcurrentLinkedQueue<>());
-					stat.put(username, new AtomicInteger[3]);
+					AtomicInteger[] arr = {new AtomicInteger(0),new AtomicInteger(0),new AtomicInteger(0)};
+					stat.put(username, arr);
 					connections.send(id,"ACK 1");
 				}
 				break;
@@ -65,7 +66,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 				if(!registered.containsKey(username) || !registered.get(username).equals(pass))
 					connections.send(id,"ERROR 2");
 				else {
-					if(currentUser.equals(""))
+					if(connected.contains(username) || !currentUser.equals(""))
 						connections.send(id,"ERROR 2");
 					else {
 						synchronized(connected) {
@@ -73,8 +74,8 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 							connected.add(currentUser);
 							userToId.put(currentUser, id);
 							connections.send(id,"ACK 2");
-							while(!pending.get(currentUser).isEmpty())
-								connections.send(id, pending.get(currentUser).remove());
+							while(!pending.get(username).isEmpty())
+								connections.send(id, pending.get(username).remove());
 						}
 					}
 				}
@@ -101,18 +102,18 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 					String succeed="";
 					if(follow==0) {
 						for(int i=0;i<numOfUsers;i++) {
-							int index=command.indexOf(" ");
+							int index=command.indexOf(' ') != -1 ? command.indexOf(' ') : command.length();
 							username=command.substring(0, index);
 							synchronized(whoFollowsMe) {
 								if(canFollow(username)) {
 									whoFollowsMe.get(username).add(currentUser);
 									stat.get(username)[1].incrementAndGet();
 									stat.get(currentUser)[2].incrementAndGet();
-									succeed +=username;
+									succeed +=username+'\0';
 									countSucceed++;
 								}
 							}
-							command=command.substring(index+1);
+							if(index != command.length()) command=command.substring(index+1);
 						}
 					}
 					else {
@@ -124,7 +125,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 									whoFollowsMe.get(username).remove(currentUser);
 									stat.get(username)[1].decrementAndGet();
 									stat.get(currentUser)[2].decrementAndGet();
-									succeed +=username;
+									succeed +=username+'\0';
 									countSucceed++;
 								}
 							}
@@ -132,7 +133,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 						}
 					}
 					if(countSucceed!=0)
-						connections.send(id,"ACK 4 " + follow +" "+countSucceed+" "+succeed+'\0');
+						connections.send(id,"ACK 4 " + follow +" "+countSucceed+" "+succeed);
 					else
 						connections.send(id,"ERROR 4");
 				}
@@ -157,6 +158,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 								pending.get(s).add("NOTIFICATION Public "+currentUser+" "+content);
 						}
 					}
+					connections.send(id, "ACK 5");
 				}
 				break;
 
@@ -173,6 +175,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 						else
 							pending.get(recipient).add("NOTIFICATION PM "+currentUser+" "+content);
 					}
+					connections.send(id, "ACK 6");
 				}
 				break;
 
@@ -182,9 +185,9 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 				else {
 					String ans;
 					synchronized(registered) {
-						ans="ACK 7 "+registered.entrySet().size();
+						ans="ACK 7 "+registered.entrySet().size()+" ";
 						for (Map.Entry<String, String> pair : registered.entrySet()) {
-							ans+=pair.getKey();
+							ans+=pair.getKey()+'\0';
 						}
 					}
 					connections.send(id, ans);
@@ -207,15 +210,14 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 	private Set<String> Tagged(String command) {
 		Set<String> ans = new HashSet<>();
 		int index = command.indexOf('@');
-		String cut;
 		String username;
 		while(index!=-1) {
-			cut=command.substring(index);
-			username=cut.substring(0, cut.indexOf(" "));
-			ans.add(username);
-			cut=cut.substring(cut.indexOf(" "));
-			index = cut.indexOf('@');
-			cut=cut.substring(index);
+			command=command.substring(index);
+			username=command.substring(1, command.indexOf(" "));
+			if(usersInfo.registered.containsKey(username))
+				ans.add(username);
+			command=command.substring(command.indexOf(" "));
+			index = command.indexOf('@');
 		}
 		return ans;
 	}
@@ -223,14 +225,14 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 	private boolean canFollow(String s) {
 		Map<String,Set<String>> whoFollowsMe = usersInfo.whoFollowsMe;
 		Map<String,String> registered = usersInfo.registered;
-		if(whoFollowsMe.get(s).contains(currentUser) || !registered.containsKey(s))
+		if((!registered.containsKey(s)) || whoFollowsMe.get(s).contains(currentUser))
 			return false;
 		return true;
 	}
 	private boolean canUnfollow(String s) {
 		Map<String,Set<String>> whoFollowsMe = usersInfo.whoFollowsMe;
 		Map<String,String> registered = usersInfo.registered;
-		if(!registered.containsKey(s) || !whoFollowsMe.get(s).contains(currentUser))
+		if((!registered.containsKey(s)) || !whoFollowsMe.get(s).contains(currentUser))
 			return false;
 		return true;
 	}
