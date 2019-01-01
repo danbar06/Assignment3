@@ -101,18 +101,13 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
             counter++;
         }
         switch(currentCode) {
-        case 1:
-        	if(counter==2) {
-        		return popString();
-        	}
-        	break;
-        case 2:
+        case 1:case 2:case 6:
         	if(counter==2) {
         		return popString();
         	}
         	break;
 
-        case 3:
+        case 3:case 7:
         	return popString();
         case 4:
         	if((len == 3 && bytes[2]==0) || (len == 4 && bytes[3]==0) || (len == 5 && bytes[4]==0))
@@ -127,23 +122,9 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
         	}
         	break;
 
-        case 5:
+        case 5:case 8:
         	if(counter==1) {
             	return popString();
-        	}
-        	break;
-
-        case 6:
-        	if(counter==2) {
-        		return popString();
-        	}
-        	break;
-
-        case 7:
-        	return popString();
-        case 8:
-        	if(counter==1) {
-        		return popString();
         	}
         	break;
         }
@@ -163,7 +144,7 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     	currentCode = -1;
     	counter=-1;
     	byte[] opcode = new byte[2];
-    	byte[] command = new byte[len-2];
+    	byte[] command;
     	opcode[0]=bytes[0];
     	opcode[1]=bytes[1];     
     	short code = bytesToShort(opcode);
@@ -176,7 +157,6 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     		byte[] tmp = new byte[2];
     		tmp[1]=bytes[2];
     		short follow = bytesToShort(tmp);
-    		tmp = new byte[2];
     		tmp[0] = bytes[3];
     		tmp[1] = bytes[4];
     		short numOfUsers = bytesToShort(tmp);
@@ -184,16 +164,17 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
 	    		if(bytes[i]=='\0') command[i-5]=' ';
 	    		else command[i-5] = bytes[i];
 	    	}
-	        String result = new String(command, 0, len-5, StandardCharsets.UTF_8);
+	        String result = new String(command, 0, command.length, StandardCharsets.UTF_8);
 	        len = 0;
-    		return code+" "+follow+" "+numOfUsers+" "+result+" ";
+    		return code+" "+follow+" "+numOfUsers+" "+result;
     	}
-    	if(code !=4 && code !=7 && code !=3) {
+    	if(code !=3 && code !=4 && code !=7) {
+        	command = new byte[len-2];
 	    	for(int i=2;i<len;i++) {
 	    		if(bytes[i]=='\0') command[i-2]=' ';
 	    		else command[i-2] = bytes[i];
 	    	}
-	        String result = new String(command, 0, len-2, StandardCharsets.UTF_8);
+	        String result = new String(command, 0, command.length, StandardCharsets.UTF_8);
 	        len = 0;
 	        return code +" "+ result;
     	}
