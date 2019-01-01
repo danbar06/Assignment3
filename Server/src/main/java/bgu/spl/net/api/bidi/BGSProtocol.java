@@ -121,7 +121,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 					}
 					else {
 						for(int i=0;i<numOfUsers;i++) {
-							int index=command.indexOf(" ");
+							int index=command.indexOf(" ") != -1 ? command.indexOf(' ') : command.length();
 							username=command.substring(0, index);
 							synchronized(whoFollowsMe) {
 								if(canUnfollow(username)) {
@@ -132,7 +132,7 @@ public class BGSProtocol implements BidiMessagingProtocol<String> {
 									countSucceed++;
 								}
 							}
-							command=command.substring(index+1);
+							if(index != command.length()) command=command.substring(index+1);
 						}
 					}
 					if(countSucceed!=0)
