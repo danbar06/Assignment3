@@ -70,7 +70,9 @@ bool ConnectionHandler::getLine(std::string& line) {
 
 bool ConnectionHandler::sendLine(std::string& line) {
     std::string encodedLine = encdec_.encode(line);
-    return sendFrameAscii(encodedLine, '\n');
+    bool result=sendBytes(encodedLine.c_str(),encodedLine.length());
+    if(!result) return false;
+    return true;
 }
 
 bool ConnectionHandler::getFrameAscii(std::string& frame, char delimiter) {

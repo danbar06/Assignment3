@@ -71,7 +71,6 @@ public:
             char buf[bufsize];
             std::cin.getline(buf, bufsize);
             std::string line(buf);
-            unsigned long len=line.length();
             if (!_connectionHandler -> sendLine(line)) {
                 std::cout << "Disconnected. Exiting...\n" << std::endl;
                 break;

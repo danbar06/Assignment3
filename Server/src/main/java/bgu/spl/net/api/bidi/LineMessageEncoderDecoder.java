@@ -8,8 +8,10 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
 
     private byte[] bytes = new byte[1 << 10]; //start with 1k
     private int len = 0;
-    private int counter=0;
+    private int counter=-1;
     private short currentCode =-1;
+	private short numOfUsers =-1;
+
 
     
     @Override
@@ -22,10 +24,10 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     	switch(code) {
     		case "NOTIFICATION":
     			Opcode = shortToBytes((short) 9);
-    			if(message.substring(0, 2).equals("PM"))
-    				tmp = ('0'+rest+'\0').replaceFirst(" ","\0").getBytes();
+    			if(rest.substring(0, 2).equals("PM"))
+    				tmp = ('0'+rest.substring(3)+'\0').replaceFirst(" ","\0").getBytes();
     			else
-    				tmp = ('1'+rest+'\0').replaceFirst(" ","\0").getBytes();
+    				tmp = ('1'+rest.substring(7)+'\0').replaceFirst(" ","\0").getBytes();
     			break;
     		case "ACK":
     			Opcode = shortToBytes((short) 10);
@@ -49,7 +51,7 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     						tmp[3]=optional[1];
     				}
     				else {
-    					tmp = new byte[10];
+    					tmp = new byte[8];
 						optional= shortToBytes(mOpcode);
 						tmp[0]=optional[0];
 						tmp[1]=optional[1];
@@ -90,6 +92,7 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     public String decodeNextByte(byte nextByte) {
         //notice that the top 128 ascii characters have the same representation as their utf-8 counterparts
         //this allow us to do the following comparison
+        pushByte(nextByte);
     	if(len==2) {
     		byte[] arr={bytes[0], bytes[1]};
     		currentCode = bytesToShort(arr);
@@ -100,60 +103,50 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
         switch(currentCode) {
         case 1:
         	if(counter==2) {
-            	currentCode = -1;
-            	counter=0;
-                pushByte(nextByte);
         		return popString();
         	}
+        	break;
         case 2:
         	if(counter==2) {
-            	currentCode = -1;
-            	counter=0;
-                pushByte(nextByte);
         		return popString();
         	}
+        	break;
+
         case 3:
-            currentCode = -1;
-            counter=0;
-            pushByte(nextByte);
         	return popString();
         case 4:
-        	short numOfUsers =-1;
+        	if((len == 3 && bytes[2]==0) || (len == 4 && bytes[3]==0) || (len == 5 && bytes[4]==0))
+        		counter--;
         	if(len == 5) {
         		byte[] arr ={bytes[3],bytes[4]};
         		numOfUsers = bytesToShort(arr);
         	}
         	if(counter == numOfUsers) {
-                pushByte(nextByte);
+        		numOfUsers = -1;
         		return popString();
         	}
+        	break;
+
         case 5:
         	if(counter==1) {
-        		currentCode = -1;
-                counter=0;
-                pushByte(nextByte);
             	return popString();
         	}
+        	break;
+
         case 6:
         	if(counter==2) {
-            	currentCode = -1;
-            	counter=0;
-                pushByte(nextByte);
         		return popString();
         	}
+        	break;
+
         case 7:
-           	currentCode = -1;
-            counter=0;
         	return popString();
         case 8:
         	if(counter==1) {
-            	currentCode = -1;
-            	counter=0;
-                pushByte(nextByte);
         		return popString();
         	}
+        	break;
         }
-        pushByte(nextByte);
 		return null; //not a line yet
     }
 
@@ -167,8 +160,10 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     private String popString() {
         //notice that we explicitly requesting that the string will be decoded from UTF-8
         //this is not actually required as it is the default encoding in java.
+    	currentCode = -1;
+    	counter=-1;
     	byte[] opcode = new byte[2];
-    	byte[] command = new byte[bytes.length-2];
+    	byte[] command = new byte[len-2];
     	opcode[0]=bytes[0];
     	opcode[1]=bytes[1];     
     	short code = bytesToShort(opcode);
@@ -177,25 +172,30 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
     		return code+" ";
     	}
     	if(code == 4) {
-    		byte[] tmp = new byte[1];
-    		tmp[0]=bytes[2];
+        	command = new byte[len-5];
+    		byte[] tmp = new byte[2];
+    		tmp[1]=bytes[2];
     		short follow = bytesToShort(tmp);
     		tmp = new byte[2];
     		tmp[0] = bytes[3];
     		tmp[1] = bytes[4];
     		short numOfUsers = bytesToShort(tmp);
-    		for(int i=5;i<bytes.length;i++)
-	    		command[i-5]=bytes[i];
-	        String result = new String(command, 0, len, StandardCharsets.UTF_8);
+    		for(int i=5;i<len;i++){
+	    		if(bytes[i]=='\0') command[i-5]=' ';
+	    		else command[i-5] = bytes[i];
+	    	}
+	        String result = new String(command, 0, len-5, StandardCharsets.UTF_8);
 	        len = 0;
     		return code+" "+follow+" "+numOfUsers+" "+result+" ";
     	}
     	if(code !=4 && code !=7 && code !=3) {
-	    	for(int i=2;i<bytes.length;i++)
-	    		command[i-2]=bytes[i];
-	        String result = new String(command, 0, len, StandardCharsets.UTF_8);
+	    	for(int i=2;i<len;i++) {
+	    		if(bytes[i]=='\0') command[i-2]=' ';
+	    		else command[i-2] = bytes[i];
+	    	}
+	        String result = new String(command, 0, len-2, StandardCharsets.UTF_8);
 	        len = 0;
-	        return code +" "+ result.replace('\0',' ');
+	        return code +" "+ result;
     	}
     	return null;
     }

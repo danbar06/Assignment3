@@ -31,6 +31,10 @@ class BgsEncoderDecoder {
 private:
     std::vector<char> buff;
     int counter = 0;
+    short opcode = -1;
+    short subOpcode = -1;
+    short numOfUsers = -1;
+    short zeroCounter = 0;
     void pushByte(char nextByte);
     std::string popString();
     void shortToBytes(short num, char* bytesArr);

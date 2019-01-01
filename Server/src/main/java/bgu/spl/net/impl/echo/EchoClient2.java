@@ -2,11 +2,11 @@ package bgu.spl.net.impl.echo;
 
 import java.io.IOException;
 
-public class EchoClient {
+public class EchoClient2 {
 
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
-            args = new String[]{"localhost", "11"};
+            args = new String[]{"localhost", "22"};
         }
 
         if (args.length < 2) {
@@ -15,6 +15,9 @@ public class EchoClient {
         }
 
         //BufferedReader and BufferedWriter automatically using UTF-8 encoding
-        new EchoUtils().sendEchoMessages(args, "a");
+        new EchoUtils().sendEchoMessages(args, "b");
+        return;
     }
+
+
 }

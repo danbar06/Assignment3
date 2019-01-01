@@ -38,8 +38,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
 	@Override
 	public void disconnect(int connectionId) {
-		uniqueId.remove(connectionId);
-		
+		uniqueId.remove(connectionId);		
 		
 	}
 

@@ -19,7 +19,7 @@ string BgsEncoderDecoder::popString() {
             string type;
             type = buff[2] == '0' ? "PM" : "Public";
             ans += "NOTIFICATION " + type+ " ";
-            for(int i = 3 ; i < buff.size()-1 ; i++){
+            for(unsigned int i = 3 ; i < buff.size()-1 ; i++){
                 ans = buff[i] == '\0' ? ans + ' ' : ans + buff[i];
             }
             break;
@@ -37,7 +37,7 @@ string BgsEncoderDecoder::popString() {
                     numOfUsers[1] = buff[5];
                     short num = bytesToShort(numOfUsers);
                     toAdd += to_string(num) + ' ';
-                    for(int i = 6 ; i < buff.size()-1 ; i++){
+                    for(unsigned int i = 6 ; i < buff.size()-1 ; i++){
                         toAdd += buff[i] == '\0' ? ' ' : buff[i];
                     }
                     break;
@@ -48,7 +48,7 @@ string BgsEncoderDecoder::popString() {
                     numOfUsers[1] = buff[5];
                     short num = bytesToShort(numOfUsers);
                     toAdd += to_string(num) + ' ';
-                    for(int i = 6 ; i < buff.size()-1 ; i++){
+                    for(unsigned int i = 6 ; i < buff.size()-1 ; i++){
                         toAdd += buff[i] == '\0' ? ' ' : buff[i];
                     }
                     break;
@@ -81,19 +81,73 @@ string BgsEncoderDecoder::popString() {
             ans += "ERROR " + to_string(mOp);
         }
     }
-
+    this->counter = 0;
+    this->opcode = -1;
+    this->subOpcode = -1;
+    this-> numOfUsers = -1;
+    this-> zeroCounter = 0;
     buff.clear();
     return ans;
 
 }
 
 string BgsEncoderDecoder::decodeNextByte(char c) {
-    if(c == '\n' && counter > 3){
-        counter = 0;
-        return popString();
-    }
     pushByte(c);
     counter++;
+    if(counter == 2){
+        char opcode[2];
+        opcode[0] = buff[0];
+        opcode[1] = buff[1];
+        this->opcode = bytesToShort(&opcode[0]);
+    }
+    if(counter == 4){
+        char opcode[2];
+        opcode[0] = buff[2];
+        opcode[1] = buff[3];
+        this->subOpcode = bytesToShort(&opcode[0]);
+    }
+    switch(opcode) {
+        case 9:{
+            if(c == '\0') zeroCounter++;
+            if(zeroCounter == 2){
+                return popString();
+            }
+            break;
+        }
+        case 10: {
+            switch (subOpcode) {
+                case 1: case 2: case 3: case 5: case 6: {
+                    if(counter == 4)
+                        return popString();
+                }
+                case 4: case 7: {
+                    if(counter == 6) {
+                        char opcode[2];
+                        opcode[0] = buff[4];
+                        opcode[1] = buff[5];
+                        this->numOfUsers = bytesToShort(&opcode[0]);
+                    }
+                    numOfUsers = c == '\0' ? numOfUsers-1 : numOfUsers;
+                    if(numOfUsers == 0){
+                        return popString();
+                    }
+                    break;
+                }
+                case 8:{
+                    if(counter == 10){
+                        return popString();
+                    }
+                    break;
+                }
+
+            }
+            break;
+        }
+        case 11: {
+            if(counter == 4)
+                return popString();
+        }
+    }
     return "-1";
 }
 
@@ -173,8 +227,9 @@ string BgsEncoderDecoder::encode(string message) {
             buffer.push_back(opcode[0]);
             buffer.push_back(opcode[1]);
             vector<char> followers(find(message.begin()+9,message.end(), ' ')+1, message.end());
-            for(int i = 0; i < followers.size() ; i++)
+            for(unsigned int i = 0; i < followers.size() ; i++)
                 buffer.push_back(followers[i] != ' ' ? followers[i] : '\0');
+            buffer.push_back('\0');
             break;
         }
         case POST:{
@@ -186,7 +241,9 @@ string BgsEncoderDecoder::encode(string message) {
             buffer.push_back('\0');
             break;
         }
-
+        default: {
+            break;
+        }
 
     }
     string temp(buffer.begin(),buffer.end());
